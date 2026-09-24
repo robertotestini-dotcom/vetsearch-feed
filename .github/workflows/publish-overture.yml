@@ -4,23 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'feed/**'
+      - 'feed/build_feed.py'
+      - 'feed/requirements.txt'
       - '.github/workflows/publish-overture.yml'
   schedule:
     - cron: '19 7 3 * *'
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 concurrency:
-  group: pages
+  group: overture-feed
   cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,9 +24,12 @@ jobs:
           python-version: '3.12'
       - run: pip install -r feed/requirements.txt
       - run: python feed/build_feed.py
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: feed/public
-      - id: deploy
-        uses: actions/deploy-pages@v4
+      - name: Pubblica i due file JSON
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add feed/public/milano.json feed/public/monza.json feed/public/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Aggiorna strutture Overture'
+            git push
+          fi
